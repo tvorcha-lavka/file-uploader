@@ -1,0 +1,8 @@
+services:
+  s3-upload-worker:
+    image: file-uploader-dev:latest
+    restart: on-failure
+
+  db-upload-worker:
+    image: file-uploader-dev:latest
+    restart: on-failure

@@ -1,0 +1,8 @@
+services:
+  test-runner:
+    image: file-uploader-dev:latest
+    container_name: test-container
+    network_mode: "host"
+    user: root
+    volumes:
+      - ../tests:/tests

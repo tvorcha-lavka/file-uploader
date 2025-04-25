@@ -1,0 +1,38 @@
+services:
+  s3-upload-worker:
+    image: file-uploader:latest
+    container_name: s3-upload-worker
+    command: /scripts/entrypoint.sh
+    env_file: ../.env
+    restart: always
+    environment:
+      QUEUE: "upload.queue"
+    networks:
+      - tvorcha-network
+    volumes:
+      - ../src:/src/
+      - ../scripts:/scripts/
+      - tvorcha-efs:/mnt/efs
+
+  db-upload-worker:
+    image: file-uploader:latest
+    container_name: db-upload-worker
+    command: /scripts/entrypoint.sh
+    env_file: ../.env
+    restart: always
+    environment:
+      QUEUE: "database.queue"
+    networks:
+      - tvorcha-network
+    volumes:
+      - ../src:/src/
+      - ../scripts:/scripts/
+      - tvorcha-efs:/mnt/efs
+
+networks:
+  tvorcha-network:
+    external: true
+
+volumes:
+  tvorcha-efs:
+    external: true
