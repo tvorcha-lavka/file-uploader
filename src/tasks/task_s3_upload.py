@@ -1,9 +1,10 @@
 from logging import getLogger
 
-from celery import Task  # type: ignore
+from celery import Task
 
+from core.celery.client import app
+from core.celery.enums import QueueEnum
 from core.exceptions import NoProcessedImageFiles, UploadingError
-from main import app
 from processors import S3UploadProcessor
 
 from .schemas import (
@@ -14,7 +15,7 @@ from .schemas import (
 logger = getLogger("celery.s3.upload")
 
 
-@app.task(name="upload.s3.product.images", queue="file-uploader.s3.queue", bind=True)
+@app.task(name="upload.s3.product.images", queue=QueueEnum.FILE_UPLOADER_S3, bind=True)
 def upload_processed_images_to_s3_task(self: Task, json_str: str | None = None) -> str | None:
     """Uploads processed images to S3."""
     if json_str is None:

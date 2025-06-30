@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic.v1 import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class StorageSettings(BaseSettings):
@@ -11,6 +11,11 @@ class StorageSettings(BaseSettings):
     MAX_COUNT_PER_REQUEST: int = 32
     CONTENT_TYPE_MAP: dict[str, str] = {".jpg": "image/jpeg", ".webp": "image/webp"}
     BASE_UPLOAD_DIR: Path = Path() / "products" if ENV_STATE != "development" else Path() / "test" / "products"
+
+    model_config = SettingsConfigDict(
+        env_prefix="STORAGE_",
+        case_sensitive=True,
+    )
 
 
 storage_settings = StorageSettings()

@@ -4,7 +4,7 @@ from re import match
 from shutil import rmtree
 from uuid import UUID
 
-from sqlalchemy.exc import DBAPIError, NoResultFound
+from sqlalchemy.exc import DBAPIError
 from uuid6 import uuid7
 
 from core.exceptions import DatabaseError
@@ -52,7 +52,7 @@ class DBUploadProcessor:
                 # Commit
                 session.commit()
 
-        except (DBAPIError, NoResultFound) as e:
+        except DBAPIError as e:
             raise DatabaseError(e)
 
         logger.debug("Product images uploaded!  %s", log_param("Product ID", self.product_id))

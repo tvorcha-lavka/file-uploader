@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock import MockerFixture
+from pytest_mock import MockerFixture, MockType
 from sqlalchemy.exc import DBAPIError
 
 from core.exceptions import DatabaseError
@@ -25,7 +25,7 @@ class TestDBUploadProcessor:
         _extract_processed_images = mocker.spy(DBUploadProcessor, "_extract_processed_images")
         mocker.patch(f"{self.processor.__module__}.generate_s3_key", return_value="some_s3_key")
 
-        def assert_func(func, db_model: type[BaseModel], expected_elements_count: int) -> None:  # type: ignore
+        def assert_func(func: MockType, db_model: type[BaseModel], expected_elements_count: int) -> None:
             func.assert_called_once()
             assert isinstance(func.spy_return, list)
             assert all(isinstance(i, db_model) for i in func.spy_return)

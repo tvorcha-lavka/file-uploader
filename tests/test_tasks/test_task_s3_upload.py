@@ -2,10 +2,11 @@ from contextlib import nullcontext
 from uuid import UUID
 
 import pytest
-from celery import states  # type: ignore
-from celery.exceptions import Retry  # type: ignore
+from celery import states
+from celery.exceptions import Retry
 from pytest_mock import MockerFixture
 
+from core.celery.enums import QueueEnum
 from core.exceptions import NoProcessedImageFiles, UploadingError
 from processors import S3UploadProcessor
 from tasks import upload_processed_images_to_s3_task
@@ -48,7 +49,7 @@ class TestUploadFilesToS3Task:
         with pytest.raises(expected_exception) if expected_exception else nullcontext():
             # Call the task
             result = upload_processed_images_to_s3_task.apply_async(
-                queue="file-uploader.s3.queue",
+                queue=QueueEnum.FILE_UPLOADER_S3,
                 kwargs={"json_str": upload_dto.model_dump_json() if data_to_process else None},
             )
 

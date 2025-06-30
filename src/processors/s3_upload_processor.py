@@ -2,11 +2,11 @@ from logging import getLogger
 from pathlib import Path
 from uuid import UUID
 
-from boto3 import Session  # type: ignore
-from boto3.exceptions import S3UploadFailedError  # type: ignore
-from botocore.client import BaseClient  # type: ignore
-from botocore.config import Config  # type: ignore
-from botocore.exceptions import BotoCoreError, NoCredentialsError  # type: ignore
+from boto3 import Session
+from boto3.exceptions import S3UploadFailedError
+from botocore.client import BaseClient
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, NoCredentialsError
 from gevent.pool import Pool
 
 from core.config.storage import storage_settings as settings

@@ -3,9 +3,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from _pytest.fixtures import FixtureRequest
-from boto3.exceptions import S3UploadFailedError  # type: ignore
-from botocore.exceptions import BotoCoreError, NoCredentialsError  # type: ignore
+from boto3.exceptions import S3UploadFailedError
+from botocore.exceptions import BotoCoreError, NoCredentialsError
+from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 
 from core.exceptions import NoProcessedImageFiles, UploadingError

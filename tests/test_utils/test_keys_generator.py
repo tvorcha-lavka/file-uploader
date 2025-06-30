@@ -2,7 +2,7 @@ from contextlib import nullcontext
 from re import compile
 
 import pytest
-from _pytest.fixtures import FixtureRequest
+from pytest import FixtureRequest
 
 from core.config.storage import storage_settings as settings
 from tests.conftest import SettingsForTests
