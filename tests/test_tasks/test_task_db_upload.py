@@ -1,10 +1,11 @@
 from contextlib import nullcontext
 
 import pytest
-from celery import states  # type: ignore
-from celery.exceptions import Retry  # type: ignore
+from celery import states
+from celery.exceptions import Retry
 from pytest_mock import MockerFixture
 
+from core.celery.enums import QueueEnum
 from core.exceptions import DatabaseError
 from processors import DBUploadProcessor
 from tasks import save_product_images_to_db_task
@@ -56,7 +57,7 @@ class TestUploadFilesToDBTask:
         with pytest.raises(expected_exception) if expected_exception else nullcontext():
             # Call the task
             result = save_product_images_to_db_task.apply_async(
-                queue="file-uploader.db.queue",
+                queue=QueueEnum.FILE_UPLOADER_DB,
                 kwargs={"json_str": save_dto.model_dump_json() if data_to_process else None},
             )
 

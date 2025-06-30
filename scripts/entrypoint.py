@@ -1,26 +1,102 @@
 #!/usr/bin/env python
 """
-Development entrypoint for `file-uploader` project.
-
-This script runs the Celery application for development purposes.
+Entrypoint for all available services of the `tvorcha-lavka-file-optimizer` project.
 """
-from core.config.log import logging_settings as settings
-from main import app
+from argparse import ArgumentParser, RawTextHelpFormatter
+from os import environ
+from pathlib import Path
+from re import sub
+
+from click import style
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
+from core.celery.client import app
+from core.celery.enums import QueueEnum
+from core.celery.settings import celery_settings
+from core.config.log import logging_settings
+
+BASE_DIR = Path(__file__).parent.parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+ENV_STATE = environ["ENV_STATE"]
+
+
+def to_snake_case(text: str) -> str:
+    if "-" in text:
+        return text.replace("-", "_").lower()
+    return sub(r"(?<!^)(?=[A-Z])", "_", text).lower()
+
+
+def to_kebab_case(text: str) -> str:
+    if "_" in text:
+        return text.replace("_", "-").lower()
+    return sub(r"(?<!^)(?=[A-Z])", "-", text).lower()
+
+
+class CeleryWorkers(BaseModel):
+    s3_upload: list[str]
+    db_upload: list[str]
+
+    @classmethod
+    def list(cls) -> list[str]:
+        return list(to_kebab_case(key) for key in cls.model_fields.keys())
+
+
+class CeleryConfig(CeleryWorkers):
+    pass
+
+
+def run_celery(worker: str) -> None:
+    celery_config = CeleryConfig(
+        s3_upload=[
+            "worker",
+            "--pool=%s" % ("solo" if celery_settings.DEBUG else "gevent"),
+            "--concurrency=10",
+            "--queues=%s" % QueueEnum.FILE_UPLOADER_S3,
+            "--max-tasks-per-child=50",
+            "--hostname=file-uploader-s3@%h",
+            "--loglevel=%s" % logging_settings.LEVEL_CONSOLE,
+            "--without-mingle",
+            "--without-gossip",
+        ],
+        db_upload=[
+            "worker",
+            "--pool=%s" % ("solo" if celery_settings.DEBUG else "threading"),
+            "--concurrency=10",
+            "--queues=%s" % QueueEnum.FILE_UPLOADER_DB,
+            "--max-tasks-per-child=50",
+            "--hostname=file-uploader-db@%h",
+            "--loglevel=%s" % logging_settings.LEVEL_CONSOLE,
+            "--without-mingle",
+            "--without-gossip",
+        ],
+    )
+
+    log_style = "yellow" if ENV_STATE == "development" else "green"
+    message = f"Running celery worker in {ENV_STATE.upper()} mode."
+
+    print(style(message, fg=log_style, bold=True))
+    app.start(getattr(celery_config, worker))
 
 
 def main() -> None:
-    params = [
-        "worker",
-        "--pool=solo",
-        "--concurrency=10",
-        "--queues=file-uploader.s3.queue,file-uploader.db.queue",
-        "--max-tasks-per-child=50",
-        "--hostname=file-uploader@%h",
-        "--loglevel=%s" % settings.LOGGING_LEVEL_CONSOLE,
-        "--without-mingle",
-        "--without-gossip",
-    ]
-    app.start(params)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
+
+    parser.add_argument(
+        "--worker",
+        required=False,
+        choices=(names := CeleryWorkers.list()),
+        metavar="<arg>",
+        help=f"Runs specified celery worker.\nargs={names}",
+    )
+    args = parser.parse_args()
+
+    if args.worker:
+        run_celery(to_snake_case(args.worker))
+
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

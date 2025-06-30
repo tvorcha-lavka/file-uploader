@@ -22,15 +22,3 @@ class SaveProductImagesToDB(BaseModel):
 
     processed_files_dir: Path
     product_id: UUID
-
-
-class NotifyUserAboutProductUpload(BaseModel):
-    """
-    Data Transfer Object
-    for notifying user about product upload task.
-    """
-
-    user_id: UUID
-    product_id: UUID
-    message: str
-    status: str

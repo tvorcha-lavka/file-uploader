@@ -1,9 +1,10 @@
 from logging import getLogger
 
-from celery import Task  # type: ignore
+from celery import Task
 
+from core.celery.client import app
+from core.celery.enums import QueueEnum
 from core.exceptions import DatabaseError
-from main import app
 from processors import DBUploadProcessor
 
 from .schemas import SaveProductImagesToDB
@@ -11,7 +12,7 @@ from .schemas import SaveProductImagesToDB
 logger = getLogger("celery.db.upload")
 
 
-@app.task(name="upload.db.product.images", queue="file-uploader.db.queue", bind=True)
+@app.task(name="upload.db.product.images", queue=QueueEnum.FILE_UPLOADER_DB, bind=True)
 def save_product_images_to_db_task(self: Task, json_str: str | None = None) -> None:
     """Saves product images to database."""
     if json_str is None:

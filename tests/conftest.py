@@ -9,7 +9,7 @@ import pytest
 from pydantic.v1 import BaseSettings
 from sqlalchemy.orm import Session
 
-from main import app
+from core.celery.client import app
 from processors import DBUploadProcessor, S3UploadProcessor
 
 

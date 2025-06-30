@@ -1,0 +1,14 @@
+services:
+  celery-s3-upload-worker-1:
+    image: tvorchalavka/file-uploader:develop
+    restart: no
+    volumes:
+      - ../src:/src:ro
+      - ../scripts:/scripts:ro
+
+  celery-db-upload-worker-1:
+    image: tvorchalavka/file-uploader:develop
+    restart: no
+    volumes:
+      - ../src:/src:ro
+      - ../scripts:/scripts:ro
