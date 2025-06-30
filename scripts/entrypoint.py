@@ -13,7 +13,7 @@ def main() -> None:
         "worker",
         "--pool=solo",
         "--concurrency=10",
-        "--queues=upload.queue,database.queue",
+        "--queues=file-uploader.s3.queue,file-uploader.db.queue",
         "--max-tasks-per-child=50",
         "--hostname=file-uploader@%h",
         "--loglevel=%s" % settings.LOGGING_LEVEL_CONSOLE,
