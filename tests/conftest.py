@@ -10,7 +10,6 @@ from pydantic.v1 import BaseSettings
 from sqlalchemy.orm import Session
 
 from main import app
-from models.product import ProductModel
 from processors import DBUploadProcessor, S3UploadProcessor
 
 
@@ -93,11 +92,6 @@ def mock_s3_client() -> Generator[MagicMock | AsyncMock, Any, None]:
 def mock_alchemy_session(test_settings: SettingsForTests) -> Generator[MagicMock | AsyncMock, Any, None]:
     with patch.object(Session, "__enter__") as mock_session:
         mock_session.return_value = MagicMock()
-        product = ProductModel(
-            id=test_settings.PRODUCT_ID,
-            owner_id=test_settings.USER_ID,
-        )
-        mock_session.return_value.get_one.return_value = product
         yield mock_session.return_value
 
 

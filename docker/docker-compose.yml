@@ -6,7 +6,7 @@ services:
     env_file: ../.env
     restart: always
     environment:
-      QUEUE: "upload.queue"
+      QUEUE: "file-uploader.s3.queue"
     networks:
       - tvorcha-network
     volumes:
@@ -21,7 +21,7 @@ services:
     env_file: ../.env
     restart: always
     environment:
-      QUEUE: "database.queue"
+      QUEUE: "file-uploader.db.queue"
     networks:
       - tvorcha-network
     volumes:

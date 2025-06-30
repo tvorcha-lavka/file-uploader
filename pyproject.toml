@@ -14,6 +14,7 @@ boto3 = "^1.38.2"
 sqlalchemy = "^2.0.40"
 psycopg2-binary = "^2.9.10"
 uuid6 = "^2024.7.10"
+redis = "^6.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.2.0"

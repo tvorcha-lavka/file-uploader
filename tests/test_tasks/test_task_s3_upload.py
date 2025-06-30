@@ -7,7 +7,6 @@ from celery.exceptions import Retry  # type: ignore
 from pytest_mock import MockerFixture
 
 from core.exceptions import NoProcessedImageFiles, UploadingError
-from main import app
 from processors import S3UploadProcessor
 from tasks import upload_processed_images_to_s3_task
 from tasks.schemas import SaveProductImagesToDB, UploadFilesToS3
@@ -21,24 +20,24 @@ class TestUploadFilesToS3Task:
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
-        "exception, expected_exception, should_call_next_task",
+        "data_to_process, exception, expected_exception",
         [
-            (None, None, True),
-            (NoProcessedImageFiles, None, False),
-            (UploadingError, Retry, False),
+            (None, None, None),
+            (True, None, None),
+            (True, NoProcessedImageFiles, None),
+            (True, UploadingError, Retry),
         ],
     )
     def test_upload_files_task(
         self,
         mocker: MockerFixture,
+        data_to_process: bool | None,
         exception: type[Exception] | None,
         expected_exception: type[Exception] | None,
-        should_call_next_task: bool,
     ) -> None:
         """Success case of test upload files task."""
         # Patch `upload` method to not call the real logic
         upload_mock = mocker.patch.object(S3UploadProcessor, "upload", side_effect=exception)
-        next_task_call = mocker.patch.object(app, "send_task")
 
         # Preparing data to transfer to the task
         upload_dto = UploadFilesToS3(
@@ -49,32 +48,29 @@ class TestUploadFilesToS3Task:
         with pytest.raises(expected_exception) if expected_exception else nullcontext():
             # Call the task
             result = upload_processed_images_to_s3_task.apply_async(
-                queue="upload.queue",
-                kwargs={"json_str": upload_dto.model_dump_json()},
+                queue="file-uploader.s3.queue",
+                kwargs={"json_str": upload_dto.model_dump_json() if data_to_process else None},
             )
 
-        if not expected_exception:
-            # Check that the `upload` method has been called
-            upload_mock.assert_called_once_with()
+        if expected_exception:
+            return
 
-            # Check that the task completed successfully
-            assert result.status == states.SUCCESS
+        if not data_to_process:
+            assert result.result is None
+            return
 
-            if should_call_next_task:
-                # Preparing data to transfer to the next task
-                save_dto = SaveProductImagesToDB(
-                    processed_files_dir=upload_dto.processed_files_dir,
-                    product_id=upload_dto.product_id,
-                )
-                # Check that the next task has been called with the correct arguments
-                next_task_call.assert_called_once_with(
-                    name="upload.db.product.images",
-                    queue="database.queue",
-                    kwargs={"json_str": save_dto.model_dump_json()},
-                )
-            else:
-                # Check that the next task has not been called
-                next_task_call.assert_not_called()
+        # Check that the `upload` method has been called
+        upload_mock.assert_called_once_with()
+
+        # Check that the task completed successfully
+        assert result.status == states.SUCCESS
+
+        if isinstance(result.result, str):
+            # Preparing data to transfer to the next task
+            next_task_data = SaveProductImagesToDB(
+                processed_files_dir=upload_dto.processed_files_dir,
+                product_id=upload_dto.product_id,
+            )
+            assert result.result == next_task_data.model_dump_json()
         else:
-            # Check that the next task has not been called
-            next_task_call.assert_not_called()
+            assert result.result is None

@@ -10,7 +10,6 @@ from uuid6 import uuid7
 from core.exceptions import DatabaseError
 from core.session import session_factory
 from models.image import ProductImageModel, ProductImageProcessedModel
-from models.product import ProductModel
 from utils import generate_s3_key, log_param
 
 logger = getLogger("celery.db.upload")
@@ -34,9 +33,9 @@ class DBUploadProcessor:
         self.originals: OriginalImageObjects = []
         self.processed: ProcessedImageObjects = []
 
-    def upload(self) -> ProductModel:
+    def upload(self) -> None:
         """Extract original and processed images from the directory and uploads them to DB."""
-        logger.debug("Updating product data... %s", log_param("Product ID", self.product_id))
+        logger.debug("Upload product images to db... %s", log_param("Product ID", self.product_id))
         objects: list[ProductImageModel | ProductImageProcessedModel] = []
 
         try:
@@ -50,17 +49,13 @@ class DBUploadProcessor:
                 objects.extend(self.processed)
                 session.add_all(objects)
 
-                # Update product status
-                product = session.get_one(ProductModel, self.product_id)
-                product.active = True
-
+                # Commit
                 session.commit()
 
         except (DBAPIError, NoResultFound) as e:
             raise DatabaseError(e)
 
-        logger.debug("Product data updated!  %s", log_param("Product ID", self.product_id))
-        return product
+        logger.debug("Product images uploaded!  %s", log_param("Product ID", self.product_id))
 
     def cleanup(self) -> None:
         """Removes processed content from the directory."""

@@ -6,11 +6,9 @@ from celery.exceptions import Retry  # type: ignore
 from pytest_mock import MockerFixture
 
 from core.exceptions import DatabaseError
-from main import app
-from models.product import ProductModel
 from processors import DBUploadProcessor
 from tasks import save_product_images_to_db_task
-from tasks.schemas import NotifyUserAboutProductUpload, SaveProductImagesToDB
+from tasks.schemas import SaveProductImagesToDB
 from tests.conftest import SettingsForTests
 
 
@@ -25,18 +23,19 @@ class TestUploadFilesToDBTask:
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
-        "exception, expected_exception, should_call_next_task",
+        "data_to_process, exception, expected_exception",
         [
-            (None, None, True),
-            (DatabaseError, Retry, False),
+            (None, None, None),
+            (True, None, None),
+            (True, DatabaseError, Retry),
         ],
     )
     def test_save_product_images_to_db_task(
         self,
         mocker: MockerFixture,
+        data_to_process: bool | None,
         exception: type[Exception] | None,
         expected_exception: type[Exception] | None,
-        should_call_next_task: bool,
     ) -> None:
         """Success case of test upload files task."""
         # Patch `upload` method to not call the real logic
@@ -44,13 +43,9 @@ class TestUploadFilesToDBTask:
             DBUploadProcessor,
             "upload",
             side_effect=exception,
-            return_value=ProductModel(
-                id=self.product_id,
-                owner_id=self.user_id,
-            ),
+            return_value=None,
         )
         cleanup_mock = mocker.patch.object(DBUploadProcessor, "cleanup")
-        next_task_call = mocker.patch.object(app, "send_task")
 
         # Preparing data to transfer to the task
         save_dto = SaveProductImagesToDB(
@@ -61,36 +56,25 @@ class TestUploadFilesToDBTask:
         with pytest.raises(expected_exception) if expected_exception else nullcontext():
             # Call the task
             result = save_product_images_to_db_task.apply_async(
-                queue="database.queue",
-                kwargs={"json_str": save_dto.model_dump_json()},
+                queue="file-uploader.db.queue",
+                kwargs={"json_str": save_dto.model_dump_json() if data_to_process else None},
             )
 
-        if not expected_exception:
-            # Check that the `upload` method has been called
-            upload_mock.assert_called_once_with()
+        if expected_exception:
+            return
 
-            # Check that the task completed successfully
-            assert result.status == states.SUCCESS
+        if not data_to_process:
+            assert result.result is None
+            return
 
-            if should_call_next_task:
-                # Preparing data to transfer to the next task
-                notify_dto = NotifyUserAboutProductUpload(
-                    user_id=self.user_id,
-                    product_id=self.product_id,
-                    message="Product uploaded successfully!",
-                    status="success",
-                )
-                # Check that the next task has been called with the correct arguments
-                next_task_call.assert_called_once_with(
-                    name="notify.user.product.uploaded",
-                    queue="notify.queue",
-                    kwargs={"json_str": notify_dto.model_dump_json()},
-                )
-            else:
-                # Check that cleanup and the next task has not been called
-                cleanup_mock.assert_not_called()
-                next_task_call.assert_not_called()
+        # Check that the `upload` method has been called
+        upload_mock.assert_called_once_with()
+        cleanup_mock.assert_called_once_with()
+
+        # Check that the task completed successfully
+        assert result.status == states.SUCCESS
+
+        if isinstance(result.result, str):
+            raise AssertionError("Result should be None")
         else:
-            # Check that cleanup and the next task has not been called
-            cleanup_mock.assert_not_called()
-            next_task_call.assert_not_called()
+            assert result.result is None

@@ -3,12 +3,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlalchemy.exc import DBAPIError, NoResultFound
+from sqlalchemy.exc import DBAPIError
 
 from core.exceptions import DatabaseError
 from models.base import BaseModel
 from models.image import ProductImageModel, ProductImageProcessedModel
-from models.product import ProductModel
 from processors import DBUploadProcessor
 
 
@@ -40,34 +39,23 @@ class TestDBUploadProcessor:
         assert_func(_extract_original_images, ProductImageModel, 1)
         assert_func(_extract_processed_images, ProductImageProcessedModel, 3)
 
-        # Check if `get_one` is called as expected
-        mock_alchemy_session.get_one.assert_called_once_with(ProductModel, self.processor.product_id)
-        product_mock = mock_alchemy_session.get_one.return_value
-        assert product_mock.active is True
-
         # Check if `add_all` and `commit` are called as expected
         add_all_data = _extract_original_images.spy_return + _extract_processed_images.spy_return
         mock_alchemy_session.add_all.assert_called_once_with(add_all_data)
         mock_alchemy_session.commit.assert_called_once()
 
     @pytest.mark.unit
-    @pytest.mark.parametrize("db_exception", (DBAPIError, NoResultFound))
     def test_upload_exception(
         self,
         mocker: MockerFixture,
         mock_alchemy_session: MagicMock,
-        db_exception: type[Exception] | None,
     ) -> None:
         """Test upload method with exception."""
         mocker.patch.object(DBUploadProcessor, "_extract_original_images", return_value=[])
         mocker.patch.object(DBUploadProcessor, "_extract_processed_images", return_value=[])
 
-        if db_exception == DBAPIError:
-            mocker.patch.object(DBAPIError, "__init__", return_value=None)
-            mock_alchemy_session.commit.side_effect = db_exception
-
-        if db_exception == NoResultFound:
-            mock_alchemy_session.get_one.side_effect = db_exception
+        mocker.patch.object(DBAPIError, "__init__", return_value=None)
+        mock_alchemy_session.commit.side_effect = DBAPIError
 
         with pytest.raises(DatabaseError):
             self.processor.upload()

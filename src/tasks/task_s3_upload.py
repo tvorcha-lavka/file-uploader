@@ -14,9 +14,13 @@ from .schemas import (
 logger = getLogger("celery.s3.upload")
 
 
-@app.task(name="upload.s3.product.images", queue="upload.queue", bind=True, max_retries=3)
-def upload_processed_images_to_s3_task(self: Task, json_str: str) -> None:
+@app.task(name="upload.s3.product.images", queue="file-uploader.s3.queue", bind=True)
+def upload_processed_images_to_s3_task(self: Task, json_str: str | None = None) -> str | None:
     """Uploads processed images to S3."""
+    if json_str is None:
+        logger.info("No data to process")
+        return None
+
     # Validate the data
     data = UploadFilesToS3.model_validate_json(json_str)
 
@@ -26,11 +30,12 @@ def upload_processed_images_to_s3_task(self: Task, json_str: str) -> None:
     try:
         # Execute process
         processor.upload()
+
     except UploadingError as e:
         raise self.retry(exc=e)
 
     except NoProcessedImageFiles:
-        return
+        return None
 
     # Preparing data to transfer to the next task
     save_dto = SaveProductImagesToDB(
@@ -39,8 +44,4 @@ def upload_processed_images_to_s3_task(self: Task, json_str: str) -> None:
     )
 
     # Call the next task
-    app.send_task(
-        name="upload.db.product.images",
-        queue="database.queue",
-        kwargs={"json_str": save_dto.model_dump_json()},
-    )
+    return save_dto.model_dump_json()
