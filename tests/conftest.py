@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import rmtree
 from typing import Any, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,6 +34,8 @@ class SettingsForTests(BaseSettings):
 
     BASE_DIR: Path = Path("/") / "tmp" / "test-dir"
     PROCESSED_FILES_DIR: Path = BASE_DIR / str(USER_ID) / str(SESSION_ID) / "processed"
+
+    AWS_S3_FOLDER: PurePosixPath = PurePosixPath("products") / "{product_id}"
 
 
 @pytest.fixture(scope="session")
@@ -98,6 +100,7 @@ def mock_alchemy_session(test_settings: SettingsForTests) -> Generator[MagicMock
 @pytest.fixture(scope="class")
 def s3_upload_processor(processed_files_dir: Path, test_settings: SettingsForTests) -> S3UploadProcessor:
     return S3UploadProcessor(
+        aws_s3_folder=test_settings.AWS_S3_FOLDER,
         processed_files_dir=processed_files_dir,
         product_id=test_settings.PRODUCT_ID,
     )

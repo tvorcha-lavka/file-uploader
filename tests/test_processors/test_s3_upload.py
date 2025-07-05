@@ -20,7 +20,7 @@ class TestS3UploadProcessor:
         self.test_bucket = "test_bucket"
 
         self.processor = s3_upload_processor
-        self.processor.s3_bucket = self.test_bucket
+        self.processor.aws_s3_bucket = self.test_bucket
 
     @pytest.mark.unit
     @pytest.mark.parametrize("has_processed", (True, False))

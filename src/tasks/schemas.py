@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -10,6 +10,7 @@ class UploadFilesToS3(BaseModel):
     for uploading files to S3 task.
     """
 
+    aws_s3_folder: PurePosixPath
     processed_files_dir: Path
     product_id: UUID
 

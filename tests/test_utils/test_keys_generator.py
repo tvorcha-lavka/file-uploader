@@ -4,7 +4,6 @@ from re import compile
 import pytest
 from pytest import FixtureRequest
 
-from core.config.storage import storage_settings as settings
 from tests.conftest import SettingsForTests
 from utils import generate_s3_key
 
@@ -22,6 +21,8 @@ def test_generate_s3_key(
 ) -> None:
     """Test generate_s3_key function."""
     file_name = "filename.jpg"
+    folder = test_settings.AWS_S3_FOLDER
+    product_id = test_settings.PRODUCT_ID
 
     if not expected_exception:
         files = request.getfixturevalue("processed_files")
@@ -29,7 +30,7 @@ def test_generate_s3_key(
 
     # Call `generate_s3_key` function
     with pytest.raises(expected_exception) if expected_exception else nullcontext():
-        result = generate_s3_key(test_settings.PRODUCT_ID, file_name)
+        result = generate_s3_key(folder, product_id, file_name)
 
     if not expected_exception:
         # Manually construct expected result
@@ -40,4 +41,4 @@ def test_generate_s3_key(
         prefix, _, suffix = match.groups()
 
         # Check result
-        assert result == str(settings.BASE_UPLOAD_DIR / str(test_settings.PRODUCT_ID) / f"{prefix}_{suffix}")
+        assert result == str(folder / f"{prefix}_{suffix}").format(product_id=product_id)
