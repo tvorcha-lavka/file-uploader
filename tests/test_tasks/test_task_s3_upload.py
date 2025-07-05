@@ -42,6 +42,7 @@ class TestUploadFilesToS3Task:
 
         # Preparing data to transfer to the task
         upload_dto = UploadFilesToS3(
+            aws_s3_folder=self.processor.aws_s3_folder,
             processed_files_dir=self.processor.processed_files_dir,
             product_id=UUID(self.processor.product_id),
         )

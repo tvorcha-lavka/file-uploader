@@ -26,7 +26,11 @@ def upload_processed_images_to_s3_task(self: Task, json_str: str | None = None) 
     data = UploadFilesToS3.model_validate_json(json_str)
 
     # Initialize the processor
-    processor = S3UploadProcessor(data.processed_files_dir, data.product_id)
+    processor = S3UploadProcessor(
+        aws_s3_folder=data.aws_s3_folder,
+        processed_files_dir=data.processed_files_dir,
+        product_id=data.product_id,
+    )
 
     try:
         # Execute process

@@ -1,5 +1,5 @@
 from logging import getLogger
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 from boto3 import Session
@@ -22,15 +22,18 @@ class S3UploadProcessor:
     session = Session()
 
     __slots__ = (
+        "aws_s3_bucket",
+        "aws_s3_folder",
         "processed_files_dir",
         "product_id",
-        "s3_bucket",
     )
 
-    def __init__(self, processed_files_dir: Path, product_id: UUID) -> None:
+    def __init__(self, aws_s3_folder: PurePosixPath, processed_files_dir: Path, product_id: UUID) -> None:
+        self.aws_s3_bucket: str = settings.AWS_S3_BUCKET_NAME
+        self.aws_s3_folder: PurePosixPath = aws_s3_folder
+
         self.processed_files_dir: Path = processed_files_dir
         self.product_id: str = str(product_id)
-        self.s3_bucket: str = settings.AWS_S3_BUCKET_NAME
 
     def has_any_processed_files(self) -> bool:
         """Checks if there are processed images available in the directory."""
@@ -64,13 +67,18 @@ class S3UploadProcessor:
     def _upload_file(self, client: BaseClient, file_path: Path) -> None:
         """Uploads a file to S3 bucket."""
         content_type = settings.CONTENT_TYPE_MAP[file_path.suffix]
-        s3_file_key = generate_s3_key(self.product_id, file_path.name)
+
+        s3_file_key = generate_s3_key(
+            folder=self.aws_s3_folder,
+            product_id=self.product_id,
+            file_name=file_path.name,
+        )
 
         # Upload the image file
         logger.debug("Uploading image %s...", file_path.name)
         client.upload_file(
             Filename=file_path,
-            Bucket=self.s3_bucket,
+            Bucket=self.aws_s3_bucket,
             Key=s3_file_key,
             ExtraArgs={"ContentType": content_type},
         )
