@@ -7,7 +7,7 @@ from sqlalchemy.exc import DBAPIError
 
 from core.exceptions import DatabaseError
 from models.base import BaseModel
-from models.image import ProductImageModel, ProductImageProcessedModel
+from models.image import ProductImageModel
 from processors import DBUploadProcessor
 
 
@@ -22,8 +22,6 @@ class TestDBUploadProcessor:
     def test_upload(self, mocker: MockerFixture, mock_alchemy_session: MagicMock) -> None:
         """Test upload method."""
         _extract_original_images = mocker.spy(DBUploadProcessor, "_extract_original_images")
-        _extract_processed_images = mocker.spy(DBUploadProcessor, "_extract_processed_images")
-        mocker.patch(f"{self.processor.__module__}.generate_s3_key", return_value="some_s3_key")
 
         def assert_func(func: MockType, db_model: type[BaseModel], expected_elements_count: int) -> None:
             func.assert_called_once()
@@ -34,13 +32,11 @@ class TestDBUploadProcessor:
         # Call `upload` method
         self.processor.upload()
 
-        # Check if `_extract_original_images` and `_extract_processed_images`
-        # are called as expected and return correct data
+        # Check if `_extract_original_images` called as expected and return correct data
         assert_func(_extract_original_images, ProductImageModel, 1)
-        assert_func(_extract_processed_images, ProductImageProcessedModel, 3)
 
         # Check if `add_all` and `commit` are called as expected
-        add_all_data = _extract_original_images.spy_return + _extract_processed_images.spy_return
+        add_all_data = _extract_original_images.spy_return
         mock_alchemy_session.add_all.assert_called_once_with(add_all_data)
         mock_alchemy_session.commit.assert_called_once()
 
@@ -52,7 +48,6 @@ class TestDBUploadProcessor:
     ) -> None:
         """Test upload method with exception."""
         mocker.patch.object(DBUploadProcessor, "_extract_original_images", return_value=[])
-        mocker.patch.object(DBUploadProcessor, "_extract_processed_images", return_value=[])
 
         mocker.patch.object(DBAPIError, "__init__", return_value=None)
         mock_alchemy_session.commit.side_effect = DBAPIError
