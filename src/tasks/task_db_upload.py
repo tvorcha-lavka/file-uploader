@@ -23,7 +23,10 @@ def save_product_images_to_db_task(self: Task, json_str: str | None = None) -> N
     data = SaveProductImagesToDB.model_validate_json(json_str)
 
     # Initialize the processor
-    processor = DBUploadProcessor(data.processed_files_dir, data.product_id)
+    processor = DBUploadProcessor(
+        processed_files_dir=data.processed_files_dir,
+        product_id=data.product_id,
+    )
 
     try:
         # Execute process
